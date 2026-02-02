@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # If you are running this from your own computer, change the above
 # line to '#!/bin/python'
@@ -38,12 +38,12 @@ def display_results(results):
     passed = results[1]
     failed = results[2]
     total  = passed + failed
-    print 'Test Results:\n'
-    print results[0]
+    print('Test Results:\n')
+    print(results[0])
     if (failed > 0):
-        print '{0} {1} failed.'.format(failed, ('tests' if (failed > 1) else 'test'))
+        print('{0} {1} failed.'.format(failed, ('tests' if (failed > 1) else 'test')))
     else:
-        print '{0} {1} passed.'.format(passed, ('tests' if (passed > 1) else 'test'))
+        print('{0} {1} passed.'.format(passed, ('tests' if (passed > 1) else 'test')))
 
 def main():
     desc = "EE180 MIPS test harness: Reports the results of a set of tests."
