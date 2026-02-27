@@ -24,4 +24,6 @@ module instruction_fetch (
 
     dffare #(32) pc_reg (.clk(clk), .r(rst), .en(en), .d(pc_next), .q(pc));
 
+    // Add support for jr, jalr, beq, and bne
+
 endmodule
