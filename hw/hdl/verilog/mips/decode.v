@@ -168,11 +168,26 @@ module decode (
 //******************************************************************************
 
     wire forward_rs_mem = &{rs_addr == reg_write_addr_mem, rs_addr != `ZERO, reg_we_mem};
+    wire forward_rt_mem = &{rt_addr == reg_write_addr_mem, rt_addr != `ZERO, reg_we_mem}; //ADDED: forward for rt as well
+    wire forward_rs_ex =  &{rs_addr == reg_write_addr_ex,  rs_addr != `ZERO, reg_we_ex, ~mem_read_ex}; //ADDED: forward from ex as well
+    wire forward_rt_ex =  &{rt_addr == reg_write_addr_ex,  rt_addr != `ZERO, reg_we_ex, ~mem_read_ex}; //ADDED
+ 
+    //assign rs_data = forward_rs_mem ? reg_write_data_mem : rs_data_in;
+    //assign rt_data = rt_data_in; // no forwarding?
 
-    assign rs_data = forward_rs_mem ? reg_write_data_mem : rs_data_in;
-    assign rt_data = rt_data_in;
+    wire [31:0] forward_rs_through_mem, forward_rt_through_mem; // ADDED" 32-bit wide
+
+    assign forward_rs_through_mem = forward_rs_mem ? reg_write_data_mem : rs_data_in; //ADDED: choose between mem and ex
+    assign rs_data = forward_rs_ex ? alu_result_ex : forward_rs_through_mem;
+
+    assign forward_rt_through_mem = forward_rt_mem ? reg_write_data_mem : rt_data_in;//ADDED
+    assign rt_data = forward_rt_ex ? alu_result_ex : forward_rt_through_mem; //ADDED
 
     wire rs_mem_dependency = &{rs_addr == reg_write_addr_ex, mem_read_ex, rs_addr != `ZERO};
+    wire rt_mem_dependency = &{rt_addr == reg_write_addr_ex, mem_read_ex, rt_addr != `ZERO}; // ADDED for rt
+
+    assign stall = (rs_mem_dependency & read_from_rs) | (rt_mem_dependency & read_from_rt); //ADDED: Stall for both rs and rt	
+
 
     wire isLUI = op == `LUI;
     wire read_from_rs = ~|{isLUI, jump_target, isShiftImm};
@@ -180,7 +195,7 @@ module decode (
     wire isALUImm = |{op == `ADDI, op == `ADDIU, op == `SLTI, op == `SLTIU, op == `ANDI, op == `ORI};
     wire read_from_rt = ~|{isLUI, jump_target, isALUImm, mem_read};
 
-    assign stall = rs_mem_dependency & read_from_rs;
+    //assign stall = rs_mem_dependency & read_from_rs;
 
     assign jr_pc = rs_data;
     assign mem_write_data = rt_data;
