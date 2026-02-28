@@ -154,7 +154,12 @@ module decode (
     wire [31:0] imm_sign_extend = {{16{immediate[15]}}, immediate};
     wire [31:0] imm_upper = {immediate, 16'b0};
 
-    wire [31:0] imm = (op == `LUI) ? imm_upper : imm_sign_extend;
+    //wire [31:0] imm = (op == `LUI) ? imm_upper : imm_sign_extend;
+
+    // TODO: Add andi implementation
+    wire [31:0] imm_zero_extended = {16'b0, immediate};
+    wire isLogicalImm = |{op == `ANDI, op == `ORI, op == `XORI};
+    wire [31:0] imm = (op == `LUI) ? imm_upper : isLogicalImm ? imm_zero_extend : imm_sign_extend;
 
 //******************************************************************************
 // forwarding and stalling logic
