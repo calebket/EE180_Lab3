@@ -31,7 +31,8 @@ module instruction_fetch (
 
     // TODO: Add support for beq, and bne (branch target addr already computed)
     wire [31:0] offset = {{14{instr_id[15]}}, instr_id[15:0], 2'b0}; //sign extended and *4
-    wire [31:0] branch_addr = pc_id_p4 + offset; //compute new address
+    wire [31:0] branch_addr = pc_id + 3'h4 + offset; //compute new address
+
 
     wire [31:0] jumping_reg = jump_reg ? jr_pc : (pc + 3'h4);
     wire [31:0] jumping_branch = jump_branch ? branch_addr : jumping_reg;
