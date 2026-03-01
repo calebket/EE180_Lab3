@@ -1,4 +1,4 @@
-//=============================================================================
+
 // EE180 Lab 3
 //
 // MIPS CPU Module. Contains the five stages in the single-cycle MIPS CPU.
@@ -25,7 +25,7 @@ module alu (
 //******************************************************************************
 // ALU datapath
 //******************************************************************************
-
+//=============================================================================
     always @* begin
         case (alu_opcode)
             // PERFORM ALU OPERATIONS DEFINED ABOVE
@@ -33,12 +33,16 @@ module alu (
             `ALU_ADDU:  alu_result = alu_op_x + alu_op_y;
             `ALU_AND:   alu_result = alu_op_x & alu_op_y;
             `ALU_OR:    alu_result = alu_op_x | alu_op_y;
+            `ALU_XOR:   alu_result = alu_op_x ^ alu_op_y; // added
+            `ALU_NOR:   alu_result = ~(alu_op_x | alu_op_y); // added
             `ALU_SUB:   alu_result = alu_op_x - alu_op_y;
             `ALU_SUBU:  alu_result = alu_op_x - alu_op_y;
             `ALU_SLTU:  alu_result = alu_op_x < alu_op_y;
             `ALU_SLT:   alu_result = alu_op_x_signed < alu_op_y_signed;
             `ALU_SRL:   alu_result = alu_op_y >> alu_op_x[4:0]; // shift operations are Y >> X
             `ALU_SLL:   alu_result = alu_op_y << alu_op_x[4:0];
+            `ALU_SRA:   alu_result = alu_op_y_signed >>> alu_op_x[4:0]; //added
+            `ALU_MUL:   alu_result = alu_op_x * alu_op_y; // added
             `ALU_PASSX: alu_result = alu_op_x;
             `ALU_PASSY: alu_result = alu_op_y;
             default:    alu_result = 32'hxxxxxxxx;   // undefined
