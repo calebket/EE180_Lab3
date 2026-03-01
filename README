@@ -1,4 +1,4 @@
 1. Hadil Owda, Caleb Ketchum
-2. All except jr and sh!
+2. All!
 3. Forwarding was handled by introducing signals to detect fowarding by comparing addresses. These signals were then used to forward the most recent and relevant data. Forwarding is also disabled in the case of a load for ex adn stalls are introduced to handle hazards.
 4. AI tools were used to assit in the understanding of the processer structure and verilog syntax. Some of the verilog syntax is a bit confusing and AI tools were used to clarify this information as well as explain its function.
