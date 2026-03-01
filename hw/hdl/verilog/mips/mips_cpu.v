@@ -164,7 +164,6 @@ module mips_cpu (
     dffare #(32) alu_result_ex2mem (.clk(clk), .r(rst), .en(en), .d(alu_sc_result_ex), .q(alu_result_mem));
     dffare mem_read_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_read_ex), .q(mem_read_mem)); // CHANGED: pipline mem_read to mem
     dffare mem_byte_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_byte_ex), .q(mem_byte_mem));
-    dffare mem_signextend_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_signextend_ex), .q(mem_signextend_mem));
 
     // needed for W stage
     dffare #(5) reg_write_addr_ex2mem (.clk(clk), .r(rst), .en(en), .d(reg_write_addr_ex), .q(reg_write_addr_mem));
@@ -174,15 +173,13 @@ module mips_cpu (
     //assign mem_read_mem = 1'b0;
     assign mem_read_en = mem_read_ex;
     // updated 
-    assign mem_write_en[3] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b00));
-    assign mem_write_en[2] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b01));
-    assign mem_write_en[1] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b10));
-    assign mem_write_en[0] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b11));
+    assign mem_write_en[3] = mem_we_ex & ((~mem_byte_ex & ~mem_halfword_ex) | (mem_addr[1:0] == 2'b00) | (mem_halfword_ex & (mem_addr[1] == 1'b0)));
+    assign mem_write_en[2] = mem_we_ex & ((~mem_byte_ex & ~mem_halfword_ex) | (mem_addr[1:0] == 2'b01) | (mem_halfword_ex & (mem_addr[1] == 1'b0)));
+    assign mem_write_en[1] = mem_we_ex & ((~mem_byte_ex & ~mem_halfword_ex) | (mem_addr[1:0] == 2'b10) | (mem_halfword_ex & (mem_addr[1] == 1'b1)));
+    assign mem_write_en[0] = mem_we_ex & ((~mem_byte_ex & ~mem_halfword_ex) | (mem_addr[1:0] == 2'b11) | (mem_halfword_ex & (mem_addr[1] == 1'b1)));   
     assign mem_addr = alu_result_ex;
-    assign mem_write_data = (mem_byte_ex) ? {4{mem_write_data_ex[7:0]}} : mem_write_data_ex;
-    assign mem_read_data_byte_select =  (alu_result_mem[1:0] == 2'b00) ? mem_read_data[31:24] :
-                                       ((alu_result_mem[1:0] == 2'b01) ? mem_read_data[23:16] :
-                                       ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0]));  
+    assign mem_write_data = mem_byte_ex ? {4{mem_write_data_ex[7:0]}} : mem_halfword_ex ? {2{mem_write_data_ex[15:0]}} : mem_write_data_ex;
+    assign mem_read_data_byte_select =  (alu_result_mem[1:0] == 2'b00) ? mem_read_data[31:24] : ((alu_result_mem[1:0] == 2'b01) ? mem_read_data[23:16] : ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0]));  
 	assign mem_read_data_byte_extend = {{24{mem_signextend_mem & mem_read_data_byte_select[7]}}, mem_read_data_byte_select};
     // updated
     wire [15:0] mem_read_data_halfword_select = (alu_result_mem[1] == 1'b0) ? mem_read_data[31:16] : mem_read_data[15:0];

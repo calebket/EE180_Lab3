@@ -33,12 +33,11 @@ module decode (
     output wire [4:0] rt_addr,
     output wire atomic_id,
     input  atomic_ex,
-
-
-    output wire mem_ll_ex,
     output wire mem_sc_mask_id,
     output wire mem_sc_id,
+
     output wire stall,
+
     input reg_we_ex,
     input [4:0] reg_write_addr_ex,
     input [31:0] alu_result_ex,
@@ -260,7 +259,7 @@ module decode (
     assign mem_read = |{op == `LW, op == `LB, op == `LBU, op == `LH, op == `LL}; // updated
     assign mem_byte = |{op == `SB, op == `LB, op == `LBU};    // memory operations use only one byte
     assign mem_signextend = ~|{op == `LBU};     // sign extend sub-word memory reads
-    assign mem_halfword = (op == `LH);
+    assign mem_halfword = (op == `LH) | (op == `SH); // added
 //******************************************************************************
 // Load linked / Store conditional
 //******************************************************************************
@@ -294,10 +293,7 @@ module decode (
 			   
 			   };
 
-<<<<<<< HEAD
-=======
     assign jump_target = isJ | isJR | isJAL | isJALR;
     assign jump_reg = isJR | isJALR;
->>>>>>> aa01ae54013dc3973ee2f412ccaab06c7b7b986f
 
 endmodule
