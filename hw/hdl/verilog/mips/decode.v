@@ -13,9 +13,9 @@ module decode (
     input [31:0] rt_data_in,
 
     output wire [4:0] reg_write_addr,
-    output wire jump_branch, //used for branch instr?
+    output wire jump_branch, //used for branch instr
     output wire jump_target,
-    output wire jump_reg, //used for branch instr
+    output wire jump_reg, //used in branch instr
     output wire [31:0] jr_pc, // used in instr_fetch
     output reg [3:0] alu_opcode,
     output wire [31:0] alu_op_x,
@@ -253,12 +253,25 @@ module decode (
 // Branch resolution
 //******************************************************************************
 
+    //DONE: Implement bgez, blez, and bltz
     wire isEqual = rs_data == rt_data;
 
-    assign jump_branch = |{isBEQ & isEqual,
-                           isBNE & ~isEqual};
+
+
+    wire isNegative = rs_data[31] == 1'b1; //the sign bit
+    wire isZero = rs_data == 32'b0; // is rs 0
+
+    assign jump_branch = |{isBEQ & isEqual, //beq
+                           isBNE & ~isEqual,// bne
+			   (isBGEZNL | isBGEZAL) & ~isNegative, //bgez
+			   isBLEZ & (isNegative | isZero), //blez
+			   (isBLTZNL | isBLTZAL) & isNegative, //bltz
+			   isBGTZ & ~isNegative & ~isZero //bgtz
+			   			   
+			   
+			   };
 
     assign jump_target = isJ;
-    assign jump_reg = 1'b0;
+    assign jump_reg = 1'b0; //change this?
 
 endmodule
