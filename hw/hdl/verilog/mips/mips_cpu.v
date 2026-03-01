@@ -182,7 +182,8 @@ module mips_cpu (
     assign mem_write_data = (mem_byte_ex) ? {4{mem_write_data_ex[7:0]}} : mem_write_data_ex;
     assign mem_read_data_byte_select =  (alu_result_mem[1:0] == 2'b00) ? mem_read_data[31:24] :
                                        ((alu_result_mem[1:0] == 2'b01) ? mem_read_data[23:16] :
-                                       ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0]));  assign mem_read_data_byte_extend = {{24{mem_signextend_mem & mem_read_data_byte_select[7]}}, mem_read_data_byte_select};
+                                       ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0]));  
+	assign mem_read_data_byte_extend = {{24{mem_signextend_mem & mem_read_data_byte_select[7]}}, mem_read_data_byte_select};
     // updated
     wire [15:0] mem_read_data_halfword_select = (alu_result_mem[1] == 1'b0) ? mem_read_data[31:16] : mem_read_data[15:0];
     wire [31:0] mem_read_data_halfword_extend = {{16{mem_signextend_mem & mem_read_data_halfword_select[15]}}, mem_read_data_halfword_select};
