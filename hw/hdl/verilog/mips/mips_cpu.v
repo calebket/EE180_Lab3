@@ -56,7 +56,11 @@ module mips_cpu (
         .jump_target    (jump_target_id),
         .pc_id          (pc_id),
         .instr_id       (instr_id[25:0]),
-        .pc             (pc_if)
+        .pc             (pc_if),
+
+	.jump_branch 	(jump_branch_id), //ADDED: inputs from branch condition
+	.jump_reg 	(jump_reg_id),
+	.jr_pc		(jr_pc_id)
     );
 
     assign pc = pc_if; // output pc to parent module
@@ -129,7 +133,7 @@ module mips_cpu (
     // needed for M stage
     dffarre #(32) mem_write_data_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_write_data_id), .q(mem_write_data_ex));
     dffarre mem_we_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_we_id & ~mem_sc_mask_id), .q(mem_we_ex));
-    dffarre mem_read_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_read_id), .q(mem_read_ex)); // ADDED: pipelined mem_read through
+    dffarre mem_read_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_read_id), .q(mem_read_ex)); // CHANGED: pipelined mem_read to ex
     dffarre mem_byte_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_byte_id), .q(mem_byte_ex));
     dffarre mem_signextend_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_signextend_id), .q(mem_signextend_ex));
 
@@ -153,7 +157,7 @@ module mips_cpu (
     wire [31:0] sc_result = {{31{1'b0}},(mem_sc_ex & mem_we_ex)};
     wire [31:0] alu_sc_result_ex = alu_result_ex;   // TODO: Need to conditionally inject SC value
     dffare #(32) alu_result_ex2mem (.clk(clk), .r(rst), .en(en), .d(alu_sc_result_ex), .q(alu_result_mem));
-    dffare mem_read_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_read_ex), .q(mem_read_mem)); // ADDED: pipline mem_read through
+    dffare mem_read_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_read_ex), .q(mem_read_mem)); // CHANGED: pipline mem_read to mem
     dffare mem_byte_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_byte_ex), .q(mem_byte_mem));
     dffare mem_signextend_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_signextend_ex), .q(mem_signextend_mem));
 
@@ -161,7 +165,7 @@ module mips_cpu (
     dffare #(5) reg_write_addr_ex2mem (.clk(clk), .r(rst), .en(en), .d(reg_write_addr_ex), .q(reg_write_addr_mem));
     dffare reg_we_ex2mem (.clk(clk), .r(rst), .en(en), .d(reg_we_ex), .q(reg_we_mem));
 
-    //assign mem_read_ex = 1'b0; ADDED: Remove these two lines?
+    //assign mem_read_ex = 1'b0; ADDED: Remove assignments to 0
     //assign mem_read_mem = 1'b0;
     assign mem_read_en = mem_read_ex;
     assign mem_write_en[3] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b00));
@@ -175,7 +179,7 @@ module mips_cpu (
                                        ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0]));
     assign mem_read_data_byte_extend = {{24{mem_signextend_mem & mem_read_data_byte_select[7]}}, mem_read_data_byte_select};
     assign mem_out = (mem_byte_mem) ? mem_read_data_byte_extend : mem_read_data;
-    assign reg_write_data_mem = mem_read_mem ? mem_out : alu_result_mem;
+    assign reg_write_data_mem = mem_read_mem ? mem_out : alu_result_mem; //for lw, mem_read_mem = 1
 
     // needed for W stage
     dffare #(32) reg_write_data_mem2wb (.clk(clk), .r(rst), .en(en), .d(reg_write_data_mem), .q(reg_write_data_wb));

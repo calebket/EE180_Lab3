@@ -13,10 +13,10 @@ module decode (
     input [31:0] rt_data_in,
 
     output wire [4:0] reg_write_addr,
-    output wire jump_branch,
+    output wire jump_branch, //used for branch instr?
     output wire jump_target,
-    output wire jump_reg,
-    output wire [31:0] jr_pc,
+    output wire jump_reg, //used for branch instr
+    output wire [31:0] jr_pc, // used in instr_fetch
     output reg [3:0] alu_opcode,
     output wire [31:0] alu_op_x,
     output wire [31:0] alu_op_y,
@@ -154,31 +154,36 @@ module decode (
     wire [31:0] imm_sign_extend = {{16{immediate[15]}}, immediate};
     wire [31:0] imm_upper = {immediate, 16'b0};
 
-    //wire [31:0] imm = (op == `LUI) ? imm_upper : imm_sign_extend;
+    //wire [31:0] imm = (op == `LUI) ? imm_upper : imm_sign_extend; // no zero-extension? -> Change?
 
-    // ADDED: andi implementation
+    // ADDED: need zero-extended option
     wire [31:0] imm_zero_extend = {16'b0, immediate}; // operators andi, ori, and xori all use zero extended immediates
     wire isLogicalImm = |{op == `ANDI, op == `ORI, op == `XORI};
     wire [31:0] imm_sign_or_zero = isLogicalImm ? imm_zero_extend: imm_sign_extend;
     wire [31:0] imm = isLUI ? imm_upper : imm_sign_or_zero; // use zero_extend on logical imm
-    
+    // TODO: still doesn't work? another issue?
 
 //******************************************************************************
 // forwarding and stalling logic
 //******************************************************************************
 
+    // DONE: Add forwarding for rt as well; lots of parrallelism between rs
+    // and rt
+    
+    //
     wire forward_rs_mem = &{rs_addr == reg_write_addr_mem, rs_addr != `ZERO, reg_we_mem};
     wire forward_rt_mem = &{rt_addr == reg_write_addr_mem, rt_addr != `ZERO, reg_we_mem}; //ADDED: forward for rt as well
+
     wire forward_rs_ex =  &{rs_addr == reg_write_addr_ex,  rs_addr != `ZERO, reg_we_ex, ~mem_read_ex}; //ADDED: forward from ex as well
-    wire forward_rt_ex =  &{rt_addr == reg_write_addr_ex,  rt_addr != `ZERO, reg_we_ex, ~mem_read_ex}; //ADDED
+    wire forward_rt_ex =  &{rt_addr == reg_write_addr_ex,  rt_addr != `ZERO, reg_we_ex, ~mem_read_ex}; //ADDED: ~mem_read_ex to ignore loads
  
     //assign rs_data = forward_rs_mem ? reg_write_data_mem : rs_data_in;
     //assign rt_data = rt_data_in; // no forwarding?
 
     wire [31:0] forward_rs_through_mem, forward_rt_through_mem; // ADDED" 32-bit wide
 
-    assign forward_rs_through_mem = forward_rs_mem ? reg_write_data_mem : rs_data_in; //ADDED: choose between mem and ex
-    assign rs_data = forward_rs_ex ? alu_result_ex : forward_rs_through_mem;
+    assign forward_rs_through_mem = forward_rs_mem ? reg_write_data_mem : rs_data_in; //ADDED:
+    assign rs_data = forward_rs_ex ? alu_result_ex : forward_rs_through_mem; // CHANGED: choose ex before mem if possible
 
     assign forward_rt_through_mem = forward_rt_mem ? reg_write_data_mem : rt_data_in;//ADDED
     assign rt_data = forward_rt_ex ? alu_result_ex : forward_rt_through_mem; //ADDED
@@ -186,7 +191,7 @@ module decode (
     wire rs_mem_dependency = &{rs_addr == reg_write_addr_ex, mem_read_ex, rs_addr != `ZERO};
     wire rt_mem_dependency = &{rt_addr == reg_write_addr_ex, mem_read_ex, rt_addr != `ZERO}; // ADDED for rt
 
-    assign stall = (rs_mem_dependency & read_from_rs) | (rt_mem_dependency & read_from_rt); //ADDED: Stall for both rs and rt	
+    assign stall = (rs_mem_dependency & read_from_rs) | (rt_mem_dependency & read_from_rt); //ADDED: Stall for rs or rt	
 
 
     wire isLUI = op == `LUI;
