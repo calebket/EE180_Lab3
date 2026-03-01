@@ -96,7 +96,7 @@ module mips_cpu (
         .mem_read           (mem_read_id),
         .mem_byte           (mem_byte_id),
         .mem_signextend     (mem_signextend_id),
-        .mem_halfword       (mem_halfword_id),
+        .mem_halfword       (mem_halfword_id), // added
         .reg_we             (reg_we_id),
         .movn               (movn_id),
         .movz               (movz_id),
@@ -138,6 +138,14 @@ module mips_cpu (
     dffarre mem_read_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_read_id), .q(mem_read_ex)); // CHANGED: pipelined mem_read to ex
     dffarre mem_byte_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_byte_id), .q(mem_byte_ex));
     dffarre mem_signextend_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_signextend_id), .q(mem_signextend_ex));
+        dffarre #(32) mem_write_data_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_write_data_id), .q(mem_write_data_ex));
+    dffarre mem_we_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_we_id & ~mem_sc_mask_id), .q(mem_we_ex));
+    dffarre mem_read_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_read_id), .q(mem_read_ex));  // jerby
+    dffarre mem_byte_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_byte_id), .q(mem_byte_ex));
+    dffarre mem_signextend_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_signextend_id), .q(mem_signextend_ex));
+    dffarre mem_halfword_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_halfword_id), .q(mem_halfword_ex));
+    dffarre mem_signextend_ex2mem (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_signextend_ex), .q(mem_signextend_mem));
+    dffarre mem_halfword_ex2mem (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_halfword_ex), .q(mem_halfword_mem));  // jerby
 
     // needed for W stage
     dffarre #(5) reg_write_addr_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(reg_write_addr_id), .q(reg_write_addr_ex));
@@ -162,9 +170,7 @@ module mips_cpu (
     dffare mem_read_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_read_ex), .q(mem_read_mem)); // CHANGED: pipline mem_read to mem
     dffare mem_byte_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_byte_ex), .q(mem_byte_mem));
     dffare mem_signextend_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_signextend_ex), .q(mem_signextend_mem));
-    dffarre mem_halfword_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_halfword_id), .q(mem_halfword_ex));
-    dffare  mem_halfword_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_halfword_ex), .q(mem_halfword_mem)); // added
-    
+
     // needed for W stage
     dffare #(5) reg_write_addr_ex2mem (.clk(clk), .r(rst), .en(en), .d(reg_write_addr_ex), .q(reg_write_addr_mem));
     dffare reg_we_ex2mem (.clk(clk), .r(rst), .en(en), .d(reg_we_ex), .q(reg_we_mem));
@@ -173,24 +179,19 @@ module mips_cpu (
     //assign mem_read_mem = 1'b0;
     assign mem_read_en = mem_read_ex;
     // updated 
-    assign mem_write_en[3] = mem_we_ex & (~mem_byte_ex & ~mem_halfword_ex | (mem_addr[1:0] == 2'b00));
-    assign mem_write_en[2] = mem_we_ex & (~mem_byte_ex & ~mem_halfword_ex | (mem_addr[1:0] == 2'b01));
-    assign mem_write_en[1] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b10)) & (~mem_halfword_ex | mem_addr[1] == 1'b1);
-    assign mem_write_en[0] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b11)) & (~mem_halfword_ex | mem_addr[1] == 1'b1);
+    assign mem_write_en[3] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b00));
+    assign mem_write_en[2] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b01));
+    assign mem_write_en[1] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b10));
+    assign mem_write_en[0] = mem_we_ex & (~mem_byte_ex | (mem_addr[1:0] == 2'b11));
     assign mem_addr = alu_result_ex;
-    assign mem_write_data = mem_byte_ex ? {4{mem_write_data_ex[7:0]}} : 
-                        mem_halfword_ex ? {2{mem_write_data_ex[15:0]}} : 
-                        mem_write_data_ex;   // updated 
+    assign mem_write_data = (mem_byte_ex) ? {4{mem_write_data_ex[7:0]}} : mem_write_data_ex;
     assign mem_read_data_byte_select =  (alu_result_mem[1:0] == 2'b00) ? mem_read_data[31:24] :
                                        ((alu_result_mem[1:0] == 2'b01) ? mem_read_data[23:16] :
-                                       ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0])); // updated
-    assign mem_read_data_byte_extend = {{24{mem_signextend_mem & mem_read_data_byte_select[7]}}, mem_read_data_byte_select};
+                                       ((alu_result_mem[1:0] == 2'b10) ? mem_read_data[15:8] : mem_read_data[7:0]));  assign mem_read_data_byte_extend = {{24{mem_signextend_mem & mem_read_data_byte_select[7]}}, mem_read_data_byte_select};
     // updated
     wire [15:0] mem_read_data_halfword_select = (alu_result_mem[1] == 1'b0) ? mem_read_data[31:16] : mem_read_data[15:0];
     wire [31:0] mem_read_data_halfword_extend = {{16{mem_signextend_mem & mem_read_data_halfword_select[15]}}, mem_read_data_halfword_select};
-    assign mem_out = mem_byte_mem ? mem_read_data_byte_extend : 
-                 mem_halfword_mem ? mem_read_data_halfword_extend : 
-                 mem_read_data;
+    assign mem_out = (mem_byte_mem) ? mem_read_data_byte_extend : (mem_halfword_mem) ? mem_read_data_halfword_extend : mem_read_data; // updated
     assign reg_write_data_mem = mem_read_mem ? mem_out : alu_result_mem; //for lw, mem_read_mem = 1
 
     // needed for W stage
